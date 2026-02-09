@@ -27,12 +27,18 @@ class ProdottoController
         // Prelievo articolo
         $stmt = $pdo->prepare("
             SELECT 
-	        a.nome nome_articolo, a.anteprima_it articolo_anteprima_it, a.anteprima_en articolo_anteprima_en, a.descrizione_it articolo_descizione_it, a.descrizione_en articolo_descrizione_en, a.catalogo_id articolo_catalogo_id
+	        a.nome nome_articolo, a.anteprima_it articolo_anteprima_it, a.anteprima_en articolo_anteprima_en, a.descrizione_it articolo_descrizione_it, a.descrizione_en articolo_descrizione_en, a.catalogo_id articolo_catalogo_id, va.altezza, va.larghezza, va.profondita
             FROM articolo a
+            INNER JOIN variante_articolo va on a.id = va.articolo_id
             WHERE a.id = ?;
         ");
         $stmt->execute([$id]);
         $articolo = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+        if ($articolo === false) {
+            jsonResponse(['error' => 'Articolo non trovato'], 404);
+            return;
+        }
 
         // Salvataggio catalogo_id per query successiva
         $catalogo_id = $articolo["articolo_catalogo_id"];
@@ -50,8 +56,9 @@ class ProdottoController
 
             // Prelievo colori collegati all'articolo
             $stmt_colori = $pdo->prepare("
-                SELECT c.id colore_id, c.nome_it nome_colore_it, c.nome_en nome_colore_en, c.tipologia tipologia_colore
+                SELECT c.id colore_id, c.nome_it nome_colore_it, c.nome_en nome_colore_en, c.tipologia tipologia_colore, i.link link_img, i.alt_it img_alt_it, i.alt_en img_alt_en
                 FROM colore c
+                INNER JOIN immagine i on i.colore_id = c.id
                 WHERE c.catalogo_id = ?;
             ");
             $stmt_colori->execute([$catalogo_id]);
@@ -59,11 +66,13 @@ class ProdottoController
 
             // Prelievo articoli correlati all'articolo id=n
             $stmt_correlati = $pdo->prepare("
-                SELECT a.id articolo_id ,a.nome nome_articolo, a.anteprima_it articolo_anteprima_it, a.anteprima_en articolo_anteprima_en, a.catalogo_id articolo_catalogo_id
+                SELECT a.id articolo_id ,a.nome nome_articolo, a.anteprima_it articolo_anteprima_it, a.anteprima_en articolo_anteprima_en, a.catalogo_id articolo_catalogo_id, i.link as img_link, i.alt_it as img_alt_it, i.alt_en as img_alt_en
                 FROM articolo a
+                INNER JOIN immagine i ON a.id = i.articolo_id 
+                AND i.id = (SELECT MIN(id) FROM immagine WHERE articolo_id = a.id)
                 WHERE a.catalogo_id = ?
                 AND a.id != ?
-                LIMIT 4;;
+                LIMIT 4;
             ");
             $stmt_correlati->execute([$catalogo_id, $id]);
             $articolo_correlati = $stmt_correlati->fetchAll(\PDO::FETCH_ASSOC);

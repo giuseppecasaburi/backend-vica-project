@@ -41,12 +41,25 @@ class CatalogoController
         if ($catalogo) {
 
             // Prelievo articoli legati al catalogo
-            $stmt = $pdo->prepare("SELECT * FROM articolo WHERE catalogo_id = ?");
+            $stmt = $pdo->prepare("
+                SELECT a.*, i.id as img_id, i.link, i.alt_it, i.alt_en 
+                FROM articolo a
+                INNER JOIN immagine i ON a.id = i.articolo_id 
+                    AND i.id = (SELECT MIN(id) FROM immagine WHERE articolo_id = a.id)
+                WHERE a.catalogo_id = ?
+            ");
             $stmt->execute([$id]);
             $articoli_collegati = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
             // Prelievo articoli in evidenza legati al catalogo
-            $stmt_2 = $pdo->prepare("SELECT * FROM articolo WHERE catalogo_id = ? AND preferito = 1");
+            $stmt_2 = $pdo->prepare("
+                SELECT a.*, i.id as img_id, i.link, i.alt_it, i.alt_en 
+                FROM articolo a
+                INNER JOIN immagine i ON a.id = i.articolo_id 
+                    AND i.id = (SELECT MIN(id) FROM immagine WHERE articolo_id = a.id)
+                WHERE a.catalogo_id = ?
+                AND preferito = 1
+            ");
             $stmt_2->execute([$id]);
             $articoli_preferiti = $stmt_2->fetchAll(\PDO::FETCH_ASSOC);
             

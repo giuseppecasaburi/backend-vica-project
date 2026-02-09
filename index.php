@@ -1,5 +1,7 @@
 <?php
 // index.php per API puro
+require_once __DIR__ . '/config/cors.php';
+
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/config/db.php';
