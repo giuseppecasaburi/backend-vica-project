@@ -24,13 +24,18 @@ class ProdottoController
         global $pdo;
         $data = [];
 
-        // Prelievo articolo
+        // Query articolo (senza varianti)
         $stmt = $pdo->prepare("
             SELECT 
-	        a.nome nome_articolo, a.anteprima_it articolo_anteprima_it, a.anteprima_en articolo_anteprima_en, a.descrizione_it articolo_descrizione_it, a.descrizione_en articolo_descrizione_en, a.catalogo_id articolo_catalogo_id, va.altezza, va.larghezza, va.profondita
+                a.id,
+                a.nome nome_articolo, 
+                a.anteprima_it articolo_anteprima_it, 
+                a.anteprima_en articolo_anteprima_en, 
+                a.descrizione_it articolo_descrizione_it, 
+                a.descrizione_en articolo_descrizione_en, 
+                a.catalogo_id articolo_catalogo_id
             FROM articolo a
-            INNER JOIN variante_articolo va on a.id = va.articolo_id
-            WHERE a.id = ?;
+            WHERE a.id = ?
         ");
         $stmt->execute([$id]);
         $articolo = $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -40,8 +45,26 @@ class ProdottoController
             return;
         }
 
+        // Query varianti dell'articolo
+        $stmt_varianti = $pdo->prepare("
+            SELECT 
+                id,
+                altezza, 
+                larghezza, 
+                profondita, 
+                nome_variante,
+                articolo_id
+            FROM variante_articolo
+            WHERE articolo_id = ?
+        ");
+        $stmt_varianti->execute([$id]);
+        $varianti = $stmt_varianti->fetchAll(\PDO::FETCH_ASSOC);
+
         // Salvataggio catalogo_id per query successiva
         $catalogo_id = $articolo["articolo_catalogo_id"];
+
+        // Aggiungi array varianti all'articolo
+        $articolo['varianti_articolo'] = $varianti;
         $data["articolo"] = $articolo;
 
         if ($articolo) {
@@ -56,13 +79,28 @@ class ProdottoController
 
             // Prelievo colori collegati all'articolo
             $stmt_colori = $pdo->prepare("
-                SELECT c.id colore_id, c.nome_it nome_colore_it, c.nome_en nome_colore_en, c.tipologia tipologia_colore, i.link link_img, i.alt_it img_alt_it, i.alt_en img_alt_en
+                SELECT
+                    c.id AS colore_id,
+                    c.nome_it AS nome_colore_it,
+                    c.nome_en AS nome_colore_en,
+                    c.tipologia AS tipologia_colore,
+                    i.link AS link_img,
+                    i.alt_it AS img_alt_it,
+                    i.alt_en AS img_alt_en
                 FROM colore c
-                INNER JOIN immagine i on i.colore_id = c.id
-                WHERE c.catalogo_id = ?;
+                INNER JOIN immagine i ON i.colore_id = c.id
+                WHERE c.catalogo_id = ?
+                ORDER BY c.tipologia, c.nome_it
             ");
             $stmt_colori->execute([$catalogo_id]);
-            $articolo_colori = $stmt_colori->fetchAll(\PDO::FETCH_ASSOC);
+            $colori = $stmt_colori->fetchAll(\PDO::FETCH_ASSOC);
+
+            $articolo_colori = [];
+
+            foreach ($colori as $colore) {
+                $tipologia = $colore['tipologia_colore'];
+                $articolo_colori[$tipologia][] = $colore;
+            }
 
             // Prelievo articoli correlati all'articolo id=n
             $stmt_correlati = $pdo->prepare("
@@ -72,6 +110,7 @@ class ProdottoController
                 AND i.id = (SELECT MIN(id) FROM immagine WHERE articolo_id = a.id)
                 WHERE a.catalogo_id = ?
                 AND a.id != ?
+                ORDER BY RAND()
                 LIMIT 4;
             ");
             $stmt_correlati->execute([$catalogo_id, $id]);
