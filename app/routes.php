@@ -15,3 +15,13 @@ $router->get('/faq', 'FaqController@index');
 // Rotte per articolo
 $router->get('/prodotto', 'ProdottoController@index');
 $router->get('/prodotto/{id}', 'ProdottoController@show');
+
+// Rotte per accessori
+$router->get('/accessori', 'AccessorioController@index');
+$router->get('/accessori/{id}', 'AccessorioController@show');
+
+// Rotte per accessorio
+$router->get('/accessorio/{id}', 'AccessorioController@show_accessorio');
+
+// Rotta per il form di contatto
+$router->post('/contatto', 'ContattoController@send');

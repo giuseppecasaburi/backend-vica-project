@@ -116,10 +116,23 @@ class ProdottoController
             $stmt_correlati->execute([$catalogo_id, $id]);
             $articolo_correlati = $stmt_correlati->fetchAll(\PDO::FETCH_ASSOC);
 
+            // Prelievo accessori correlati all'articolo id=n
+            $stmt_accessori_correlati = $pdo->prepare("
+                SELECT la.id articolo_id, la.nome nome_articolo, la.catalogo_id linea_accessorio_catalogo_id, i.link as img_link, i.alt_it as img_alt_it, i.alt_en as img_alt_en
+                FROM linea_accessorio la
+                INNER JOIN immagine i ON la.id = i.linea_accessorio_id 
+                AND i.id = (SELECT MIN(id) FROM immagine WHERE linea_accessorio_id = la.id)
+                ORDER BY RAND()
+                LIMIT 4;
+            ");
+            $stmt_accessori_correlati->execute();
+            $accessori_correlati = $stmt_accessori_correlati->fetchAll(\PDO::FETCH_ASSOC);
+
             // Creazione response
             $data["immagini_articolo"] = $articolo_immagini;
             $data["colori_articolo"] = $articolo_colori;
             $data["correlati_articolo"] = $articolo_correlati;
+            $data["correlati_accessori"] = $accessori_correlati;
             jsonResponse($data);
         } else {
             jsonResponse(['error' => 'Articolo non trovato'], 404);

@@ -2,11 +2,17 @@
 // index.php per API puro
 require_once __DIR__ . '/config/cors.php';
 
+
 header('Content-Type: application/json; charset=utf-8');
 
+require_once __DIR__ . '/vendor/autoload.php';
 require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/app/Router.php';
 require_once __DIR__ . '/utility/response.php';
+
+// Carica il .env dalla root del progetto
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
+$dotenv->load();
 
 $router = new Router();
 require_once __DIR__ . '/app/routes.php';
